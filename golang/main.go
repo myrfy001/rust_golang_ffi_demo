@@ -1,7 +1,7 @@
 package main
 
 /*
-#cgo CFLAGS: -I../rust/target/debug
+#cgo CFLAGS: -I.
 #cgo LDFLAGS: -L../rust/target/debug -lrust
 
 #include "ffi_demo.h"
