@@ -1,3 +1,3 @@
-#include "stddef.h"
+#include "stdint.h"
 
-size_t simple_rust_func_called_from_go(unsigned char arg1, short int arg2, int arg3);
+uintptr_t simple_rust_func_called_from_go(uint8_t arg1, uint16_t arg2, uint32_t arg3);
