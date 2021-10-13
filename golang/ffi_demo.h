@@ -8,5 +8,8 @@ char* receive_str_and_return_str(char*);
 // the follow line is a very ugly api design, only used as example, never use in real code.
 char* receive_string_and_return_str(char*, char**, char**, uintptr_t*, uintptr_t*);
 
-void free_string_alloc_by_rust_by_raw_parts(char**, uintptr_t, uintptr_t);
+void free_string_alloc_by_rust_by_raw_parts(char*, uintptr_t, uintptr_t);
 void free_cstring_alloc_by_rust(char*);
+
+
+void receive_str_and_return_str_no_copy(char*, char**, uintptr_t*);

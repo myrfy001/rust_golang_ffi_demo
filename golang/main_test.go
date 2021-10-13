@@ -9,3 +9,11 @@ func TestSimpleRustFuncCalledFromGo(t *testing.T) {
 func TestPassStringBySinglePointer(t *testing.T) {
 	PassStringBySinglePointer()
 }
+
+func TestPassStringBySecondOrderPointer(t *testing.T) {
+	PassStringBySecondOrderPointer()
+}
+
+func TestPassStringByReuseUnderlyingBuffer(t *testing.T) {
+	PassStringByReuseUnderlyingBuffer()
+}

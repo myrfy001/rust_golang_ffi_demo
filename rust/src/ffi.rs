@@ -21,13 +21,13 @@ pub fn receive_str_and_return_string(s: *const c_char) -> *const c_char {
 
     // the following line will iter over the str again to check all the bytes 
     // are valid utf-8 encoding.
-    let str = cstr.to_str().expect("not valid utf-8 string");
+    let rstr = cstr.to_str().expect("not valid utf-8 string");
 
     // in the above code, we didn't alloc new memory space, but we went
     // through the whole string twice to make it safe. you need to think 
     // about the overhead if this is on your hot path.
     // Now, we got a rust str and can call safe rust functions!
-    let ret = my_app::my_app_receive_str_and_return_string(str);
+    let ret = my_app::my_app_receive_str_and_return_string(rstr);
 
     // Now we got a String, there was a memory alloc in the above function call.
     // We will return a pointer to the golang caller, the pointer must point to
@@ -99,11 +99,11 @@ pub fn receive_str_and_return_str(s: *const c_char) -> *const c_char {
         unsafe{CStr::from_ptr(s)}
     };
 
-    let str = cstr.to_str().expect("not valid utf-8 string");
+    let rstr = cstr.to_str().expect("not valid utf-8 string");
 
     // the following function call won't alloc memory, it will reuse the 
     // underlying buffer, it seems good now ~
-    let ret = my_app::my_app_receive_str_and_return_str(str);
+    let ret = my_app::my_app_receive_str_and_return_str(rstr);
 
     // But...,if the above function call return a sub slice of the input string,
     // there won't be a Null byte at the end of the sub string. So, we have to 
@@ -134,7 +134,7 @@ pub fn receive_str_and_return_str(s: *const c_char) -> *const c_char {
 
 #[no_mangle]
 // the follow ffi interface is a very ugly api design, only used as example, never use in real code.
-pub fn receive_string_and_return_str<'a>(s: *const c_char, new_ptr: *mut *const c_char, c_origin_ptr: *mut *const c_char, len: *mut usize, cap: *mut usize) {
+pub fn receive_string_and_return_str(s: *const c_char, new_ptr: *mut *const c_char, c_origin_ptr: *mut *const c_char, len: *mut usize, cap: *mut usize) {
 	// the following lines which don't have comments is the same as previous
     // functions, you can refer to the previous comments if you can't understand
     // why we need those lines of code.
@@ -167,4 +167,34 @@ pub unsafe fn free_string_alloc_by_rust_by_raw_parts(s: *mut c_char, len: usize,
 #[no_mangle]
 pub unsafe fn free_cstring_alloc_by_rust(s: *mut c_char) {
 	CString::from_raw(s);
+}
+
+
+#[no_mangle]
+pub fn receive_str_and_return_str_no_copy(s: *const c_char, new_ptr: *mut *const c_char, len: *mut usize) {
+	// the following lines which don't have comments is the same as previous
+    // functions, you can refer to the previous comments if you can't understand
+    // why we need those lines of code.
+    
+    let cstr = {
+        assert!(!s.is_null());
+        unsafe{CStr::from_ptr(s)}
+    };
+
+    let rstr = cstr.to_str().expect("not valid utf-8 string");
+    let ret = my_app::my_app_receive_str_and_return_str(rstr);
+    let c_ret = ret.as_ptr();
+
+    unsafe {
+        *new_ptr = c_ret as *const i8;
+        *len = ret.len();
+    }
+
+    // Important Notice:
+    // This function has no `to_owned()` nor `to_string()`, so it won't alloc
+    // any new memory on heap.
+    // To solve the problem that returned sub string not end with Null byte,
+    // we redesigned the api so that it will return the length of the string.
+    // If you write a library like this, you should write it clear in your
+    // document that the returned pointer points to the caller's memory.
 }
