@@ -45,8 +45,8 @@ pub fn receive_str_and_return_string(s: *const c_char) -> *const c_char {
 
     // Finally, We need to return a pointer pointing to the heap memory of the
     // CString. The into_raw() will consume the c_ret, let the compiler 
-    // forget about it, and only return a raw pointer pointing to the heap
-    // address.
+    // forget the heap memory it owned, and return a raw pointer pointing to
+    // the heap address.
     // But this cause another problem: who will free the memory later?
     // We will solve the problem later.
     c_ret.into_raw()
@@ -123,7 +123,7 @@ pub fn receive_str_and_return_str(s: *const c_char) -> *const c_char {
     // The return value can't reuse the memory space.
     //
     // If you really want a zero-copy, then you should redesign the api interface
-    // we leave this as a homework for now.
+    // we will show it later.
     //
     // As the author of this library, it's your responsibility to write a clear
     // document telling the user what happened with the input and output data.
@@ -133,7 +133,8 @@ pub fn receive_str_and_return_str(s: *const c_char) -> *const c_char {
 }
 
 #[no_mangle]
-pub fn receive_string_and_return_str<'a>(s: *const c_char, new_ptr: *const c_char, c_origin_ptr: *const c_char, len: *mut usize, cap: *mut usize) {
+// the follow ffi interface is a very ugly api design, only used as example, never use in real code.
+pub fn receive_string_and_return_str<'a>(s: *const c_char, new_ptr: *mut *const c_char, c_origin_ptr: *mut *const c_char, len: *mut usize, cap: *mut usize) {
 	// the following lines which don't have comments is the same as previous
     // functions, you can refer to the previous comments if you can't understand
     // why we need those lines of code.
@@ -150,14 +151,20 @@ pub fn receive_string_and_return_str<'a>(s: *const c_char, new_ptr: *const c_cha
 
 
     let c_ret = CString::new(ret).expect("null byte in the middle");
+    unsafe {
+        *new_ptr = c_ret.into_raw();
+        *c_origin_ptr = t_c_origin_ptr as *const i8;
+        *len = t_len;
+        *cap = t_cap;
+    }
 }
 
 #[no_mangle]
-pub unsafe fn free_string_by_raw_parts(s: *mut c_char, len: usize, cap: usize) {
+pub unsafe fn free_string_alloc_by_rust_by_raw_parts(s: *mut c_char, len: usize, cap: usize) {
 	String::from_raw_parts(s as *mut u8, len, cap);
 }
 
 #[no_mangle]
-pub unsafe fn free_cstring(s: *mut c_char) {
+pub unsafe fn free_cstring_alloc_by_rust(s: *mut c_char) {
 	CString::from_raw(s);
 }

@@ -36,9 +36,8 @@ pub fn my_app_receive_str_and_return_str(s: &str) -> &str {
 pub unsafe fn my_app_receive_string_and_return_str<'a>(s: String) -> (&'a str, *const u8, usize, usize) {
 	// this function is only used as an example to show that we can use unsafe 
 	// rust to turn an owned type to a reference, you should not write such code
-	// in production code.
+	// in production code. It's a very ugly api design.
 
-	
 
 	// neither path alloc new memory
 	let my_slice = if s.len() > 15 {
