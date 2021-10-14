@@ -32,7 +32,10 @@ func PassStringBySinglePointer() {
 
 	testProc := func(f int, x, y string) {
 		goStr := x
-		cStr := C.CString(goStr)  // Memory Alloc And String Copy
+
+		// Memory Alloc in OS allocator And String Copy
+		// cStr is not managed by go GC
+		cStr := C.CString(goStr) 
 		defer C.free(unsafe.Pointer(cStr))
 	
 		var cStrRet *C.char
@@ -45,7 +48,9 @@ func PassStringBySinglePointer() {
 			cStrRet = C.receive_str_and_return_str(cStr)
 		}
 		
-		goStrRet := C.GoString(cStrRet)  // Memory Alloc And String Copy
+		// Memory Alloc in Go runtime And String Copy
+    	// goStrRet is managed by go GC
+		goStrRet := C.GoString(cStrRet)
 		C.free_cstring_alloc_by_rust(cStrRet)
 
 		if goStrRet != y {

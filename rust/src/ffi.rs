@@ -13,14 +13,23 @@ fn simple_rust_func_called_from_go(arg1: u8, arg2: u16, arg3: u32) -> usize {
 #[no_mangle]
 pub fn receive_str_and_return_string(s: *const c_char) -> *const c_char {
 	let cstr = {
+        // ALWAYS check if a pointer is null !!!!
         assert!(!s.is_null());
         // what the following line do is iter over the memory address starts 
         // from s and find the first null byte, i.e.,get the length of the str.
+        // compared to `*const c_char`, `&CStr` save length in itself.
+        // since we read from a raw pointer, we need to use unsafe block.
         unsafe{CStr::from_ptr(s)}
     };
 
     // the following line will iter over the str again to check all the bytes 
-    // are valid utf-8 encoding.
+    // are valid utf-8 encoding. if we pass the check, we only change the fat 
+    // pointer type from `&CStr` to `&str` to tell the type system: This is a 
+    // string that satisfy rust's requirement, you can use it in safe rust. The
+    // underlying byte buffer is not touched.
+    // since the `&str` is a reference, it now refs to the memory owned by the 
+    // foreign system (for example, Golang), so, it's the caller's responsibility
+    // to make sure the string is not freed during the call.
     let rstr = cstr.to_str().expect("not valid utf-8 string");
 
     // in the above code, we didn't alloc new memory space, but we went

@@ -7,10 +7,10 @@ pub fn my_app_simple_rust_func_called_from_go(arg1: u8, arg2: u16, arg3: u32) ->
 
 pub fn my_app_receive_string_and_return_string(s: String) -> String {
 	if s.len() > 15 {
-		// this path has new memory alloc
+		// this path has new memory alloc on heap
 		s[0..15].to_string()
 	} else {
-		// this path doesn't have new memory alloc
+		// this path doesn't have new memory alloc on heap
 		s
 	}
 }
@@ -51,9 +51,4 @@ pub unsafe fn my_app_receive_string_and_return_str<'a>(s: String) -> (&'a str, *
 	// I use ManuallyDrop explicit here to show you how memory is managed
 	let s = ManuallyDrop::new(s);	
 	(my_slice, s.as_ptr(), s.len(), s.capacity())
-}
-
-
-pub unsafe fn my_app_free_string_by_raw_parts(s: *mut u8, len: usize, cap: usize) {
-	String::from_raw_parts(s, len, cap);
 }
