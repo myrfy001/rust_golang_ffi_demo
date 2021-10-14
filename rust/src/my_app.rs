@@ -49,6 +49,9 @@ pub unsafe fn my_app_receive_string_and_return_str<'a>(s: String) -> (&'a str, *
 	// you can replace the following two lines using s.into_raw_parts()
 	// s.into_raw_parts() internally use ManuallyDrop too
 	// I use ManuallyDrop explicit here to show you how memory is managed
+	// The reason why we need to return the ptr, len and cap is that we need them
+	// to rebuild the String header, we need to rebuild the string header to 
+	// free memory.
 	let s = ManuallyDrop::new(s);	
 	(my_slice, s.as_ptr(), s.len(), s.capacity())
 }

@@ -83,10 +83,10 @@ pub fn receive_string_and_return_string(s: *const c_char) -> *const c_char {
     // to_str() will go through the string and to_string() will alloc new memory
     // and copy the whole string, so the following line will do one allocation
     // and two pass of scan.
-    let string = cstr.to_str().expect("not valid utf-8 string").to_string();
+    let r_string = cstr.to_str().expect("not valid utf-8 string").to_string();
 
     // the following function call maybe alloc new memory, depending on the string length.
-    let ret = my_app::my_app_receive_string_and_return_string(string);
+    let ret = my_app::my_app_receive_string_and_return_string(r_string);
 
     let c_ret = CString::new(ret).expect("null byte in the middle");
     c_ret.into_raw()
@@ -94,6 +94,9 @@ pub fn receive_string_and_return_string(s: *const c_char) -> *const c_char {
     // IMPORTNT NOTICE
     // the same as above, input memory is owned by golang and return value 
     // is owned by rust
+    // r_string and ret are both temp variables, the returned pointer point to 
+    // the heap memory owned by c_ret, the heap memory of r_string and ret are
+    // both freed when the function returns.
 }
 
 
@@ -115,8 +118,11 @@ pub fn receive_str_and_return_str(s: *const c_char) -> *const c_char {
     let ret = my_app::my_app_receive_str_and_return_str(rstr);
 
     // But...,if the above function call return a sub slice of the input string,
-    // there won't be a Null byte at the end of the sub string. So, we have to 
-    // create a CString again, it has overhead!
+    // there won't be a Null byte at the end of the sub string. 
+    // Since `&str` is a fat pointer in rust, so it's not a problem in pure rust.
+    // But when we comes at the FFI boundary, we need to talk in C, it becomes 
+    // a serious problem.
+    //So, we have to create a CString again, it has overhead!
     let c_ret = CString::new(ret).expect("null byte in the middle");
     c_ret.into_raw()
 
@@ -143,6 +149,8 @@ pub fn receive_str_and_return_str(s: *const c_char) -> *const c_char {
 
 #[no_mangle]
 // the follow ffi interface is a very ugly api design, only used as example, never use in real code.
+// there are second order pointers in the args, they are used as output values since CFFI not allow 
+// return multi values
 pub fn receive_string_and_return_str(s: *const c_char, new_ptr: *mut *const c_char, c_origin_ptr: *mut *const c_char, len: *mut usize, cap: *mut usize) {
 	// the following lines which don't have comments is the same as previous
     // functions, you can refer to the previous comments if you can't understand
@@ -153,10 +161,10 @@ pub fn receive_string_and_return_str(s: *const c_char, new_ptr: *mut *const c_ch
         unsafe{CStr::from_ptr(s)}
     };
 
-    let string = cstr.to_str().expect("not valid utf-8 string").to_string();
+    let r_string = cstr.to_str().expect("not valid utf-8 string").to_string();
 
     
-    let (ret, t_c_origin_ptr, t_len, t_cap) = unsafe{my_app::my_app_receive_string_and_return_str(string)};
+    let (ret, t_c_origin_ptr, t_len, t_cap) = unsafe{my_app::my_app_receive_string_and_return_str(r_string)};
 
 
     let c_ret = CString::new(ret).expect("null byte in the middle");
@@ -166,6 +174,18 @@ pub fn receive_string_and_return_str(s: *const c_char, new_ptr: *mut *const c_ch
         *len = t_len;
         *cap = t_cap;
     }
+    // IMPORTNT NOTICE
+    // the same as above, input memory is owned by golang and return value 
+    // is owned by rust
+    // the returned pointer point to the heap memory owned by c_ret
+    // the c_ret.into_raw() will make compiler forget about these memory, 
+    // it won't be freed when function returns.
+    // ret is a temp var.
+    // ret points to the memory address owned by r_string
+    // t_c_origin_ptr also points to the memory address owned by r_string
+    // since inside `the my_app::my_app_receive_string_and_return_str()`, the
+    // memory owned by r_string was forgotten, so after the function return
+    // c_origin_ptr still points to a valid memory address
 }
 
 #[no_mangle]
@@ -175,6 +195,7 @@ pub unsafe fn free_string_alloc_by_rust_by_raw_parts(s: *mut c_char, len: usize,
 
 #[no_mangle]
 pub unsafe fn free_cstring_alloc_by_rust(s: *mut c_char) {
+    // will iter through the memory to count the length of the string
 	CString::from_raw(s);
 }
 
@@ -204,6 +225,8 @@ pub fn receive_str_and_return_str_no_copy(s: *const c_char, new_ptr: *mut *const
     // any new memory on heap.
     // To solve the problem that returned sub string not end with Null byte,
     // we redesigned the api so that it will return the length of the string.
+    
+    // !!!The returned pointer points to the memory owned by forengn System.!!!
     // If you write a library like this, you should write it clear in your
     // document that the returned pointer points to the caller's memory.
 }
